@@ -16,7 +16,10 @@ builder.Services.AddEndpointsApiExplorer();
 
 // Configured Swagger to show the "Authorize" button for your long API key validation
 builder.Services.AddSwaggerGen(c => {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "OnnxChatApi", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { 
+        Title = "ONNX API", 
+        Description = "Deepseek R1 Distill - Qwen 14B", 
+        Version = "v1" });
 
     //deepseek-r1-distill-qwen-14b
     c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme {
