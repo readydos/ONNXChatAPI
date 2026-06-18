@@ -30,8 +30,14 @@ public sealed class ChatController : ControllerBase {
         try {
             var reply = await _chatService.ChatAsync(request.Message, cancellationToken);
 
+            if (reply.Contains(@"</think>")) {
+                reply = reply.Replace(@"</think>", string.Empty);
+            }
+
+            reply = reply.Replace(@"\n", Environment.NewLine);
+
             return Ok(new ChatResponse {
-                Reply = reply
+                Reply = reply.Trim()
             });
         } finally {
             _semaphore.Release();
