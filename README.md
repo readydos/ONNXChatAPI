@@ -38,7 +38,7 @@ flowchart LR
 ## Project Structure
 
 ```text
-OnnxChatApi/
+ChatAPI/
 ├── Controllers/
 │   └── ChatController.cs
 ├── Models/
