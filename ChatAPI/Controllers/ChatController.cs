@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OnnxChatApi.Models;
 using OnnxChatApi.Services;
+using System.Text.Json;
 
 namespace OnnxChatApi.Controllers;
 
@@ -15,6 +16,22 @@ public sealed class ChatController : ControllerBase {
     }
 
     private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    [HttpPost("stream")]
+    [ApiKey]
+    [ProducesResponseType(typeof(ChatResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [HttpPost("stream-ndjson")]
+    public async Task StreamNdjson(ChatRequest request, CancellationToken ct) {
+        Response.ContentType = "application/x-ndjson";
+
+        await foreach (var token in GenerateTokens(request.Message, ct)) {
+            var json = JsonSerializer.Serialize(new { token });
+            await Response.WriteAsync(json + "\n", ct);
+            await Response.Body.FlushAsync(ct);
+        }
+    }
+
 
     [HttpPost]
     [ApiKey]

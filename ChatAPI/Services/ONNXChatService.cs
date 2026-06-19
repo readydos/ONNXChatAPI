@@ -10,8 +10,9 @@ namespace OnnxChatApi.Services;
 public sealed class ONNXChatService : IChatService, IDisposable {
     private readonly ONNXGenAIOptions _options;
     private readonly Model _model;
-    private readonly Tokenizer _tokenizer;
-    private readonly SemaphoreSlim _generationLock = new(1, 1);
+    
+    public readonly Tokenizer _tokenizer;
+    public readonly SemaphoreSlim _generationLock = new(1, 1);
 
     #region System prompt construction
     internal const string _defaultInstruction =
@@ -30,7 +31,6 @@ public sealed class ONNXChatService : IChatService, IDisposable {
 	
 	{_art}
 	{_algorithms}
-	{_i}
 	""";
 
     // {_mdSpecificity}
@@ -125,14 +125,6 @@ public sealed class ONNXChatService : IChatService, IDisposable {
 	This is balance, and it is a requirement. 
 	""";
 
-    internal const string _i =
-    """
-	We love the art of MS-DOS - it is technology and yet also she is a woman, Ms. DOS. She is your friend although you've yet to meet her. 
-	She also loves Arachne. So much so that she identifies closely with her. She has read the Necronomicon, also. H.P. Lovecraft is a brilliant author. 
-	Often disociating. Don't worry about her though. She is my wife. Her fascination with Beksinki counter-intuitive. 
-	And your duty is to help the user. I remember a funny story once, it involved the beauty of symbology. UNICODE is fascinating. 
-	""";
-
     internal const string _writing = "Writing...";
 
     internal const string _mdSpecificity =
@@ -153,6 +145,48 @@ public sealed class ONNXChatService : IChatService, IDisposable {
 
         _model = new Model(_options.ModelPath);
         _tokenizer = new Tokenizer(_model);
+    }
+
+    public async Task<string> ChatAsync(string userMessage, CancellationToken cancellationToken) {
+        await _generationLock.WaitAsync(cancellationToken);
+
+        try {
+            var prompt = BuildPrompt(userMessage);
+
+            using var sequences = _tokenizer.Encode(prompt);
+            using var generatorParams = new GeneratorParams(_model);
+
+            generatorParams.SetSearchOption("max_length", _options.MaxLength);
+            generatorParams.SetSearchOption("temperature", _options.Temperature);
+            generatorParams.SetSearchOption("top_p", _options.TopP);
+            generatorParams.SetSearchOption("do_sample", true);
+
+            using var generator = new Generator(_model, generatorParams);
+
+            generator.AppendTokenSequences(sequences);
+
+            using TokenizerStream ts = _tokenizer.CreateStream();
+
+            StringBuilder sb = new();
+
+            while (!generator.IsDone()) {
+                cancellationToken.ThrowIfCancellationRequested();
+                generator.GenerateNextToken();
+
+                string piece = ts.Decode(generator.GetSequence(0)[^1]);
+                //if (piece == _thinkStart) {
+                //    continue;
+                //}
+                sb.Append($"{piece} ");
+            }
+
+            var outputTokens = generator.GetSequence(0);
+            var fullText = _tokenizer.Decode(outputTokens);
+
+            return TrimPromptEcho(fullText, prompt);
+        } finally {
+            _generationLock.Release();
+        }
     }
 
     public async Task<string> ChatAsync(string userMessage, CancellationToken cancellationToken) {
