@@ -150,58 +150,6 @@ public sealed class ONNXChatService : IChatService, IDisposable {
 
     public record ChatChunk(string Token);
 
-    public async IAsyncEnumerable<ChatChunk> ChatStream(string userMessage, [EnumeratorCancellation] CancellationToken cancellationToken) {
-            await foreach (var token in GenerateTokenStream(userMessage, cancellationToken)) {
-                yield return new ChatChunk(token);
-            }
-        }
-
-    private async IAsyncEnumerable<string> GenerateTokenStream(
-        string userMessage,
-        [EnumeratorCancellation] CancellationToken ct) {
-
-        try {
-            var prompt = BuildPrompt(userMessage);
-
-            using var sequences = _tokenizer.Encode(prompt);
-            using var generatorParams = new GeneratorParams(_model);
-
-            generatorParams.SetSearchOption("max_length", _options.MaxLength);
-            generatorParams.SetSearchOption("temperature", _options.Temperature);
-            generatorParams.SetSearchOption("top_p", _options.TopP);
-            generatorParams.SetSearchOption("do_sample", true);
-
-            using var generator = new Generator(_model, generatorParams);
-
-            generator.AppendTokenSequences(sequences);
-
-            using TokenizerStream ts = _tokenizer.CreateStream();
-
-            StringBuilder sb = new();
-
-            while (!generator.IsDone()) {
-                ct.ThrowIfCancellationRequested();
-                generator.GenerateNextToken();
-
-                string piece = ts.Decode(generator.GetSequence(0)[^1]);
-                //if (piece == _thinkStart) {
-                //    continue;
-                //}
-                yield return $"{piece} ";
-
-
-                ct.ThrowIfCancellationRequested();
-            }
-
-            var outputTokens = generator.GetSequence(0);
-            var fullText = _tokenizer.Decode(outputTokens);
-
-            //
-        } finally {
-            _generationLock.Release();
-        }
-    }
-
     public async Task<string> ChatAsync(string userMessage, CancellationToken cancellationToken) {
         await _generationLock.WaitAsync(cancellationToken);
 
@@ -255,10 +203,20 @@ public sealed class ONNXChatService : IChatService, IDisposable {
         """;
     }
 
-    private static string TrimPromptEcho(string generatedText, string prompt) {
-        return generatedText.StartsWith(prompt, StringComparison.Ordinal)
+    private string TrimPromptEcho(string generatedText, string prompt) {
+        string toReturn = string.Empty;
+        toReturn = generatedText.StartsWith(prompt, StringComparison.Ordinal)
             ? generatedText[prompt.Length..].Trim()
             : generatedText.Trim();
+
+        if (toReturn.Contains(_options.SystemMessage)) {
+            toReturn = toReturn.Replace(_options.SystemMessage, string.Empty);
+        }
+
+        toReturn = toReturn.Replace("\r\n\r\n\r\n", "\r\n");
+        toReturn = toReturn.Replace("\n\n\n", "\n");
+
+        return toReturn;
     }
 
     public void Dispose() {
