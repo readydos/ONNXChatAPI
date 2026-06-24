@@ -9,8 +9,11 @@
     <PackageJsonScriptsBuild Condition="$(PackageJsonScriptsBuild) == ''">tsc -b &amp;&amp; vite build</PackageJsonScriptsBuild>
     <PackageJsonScriptsLint Condition="$(PackageJsonScriptsLint) == ''">eslint .</PackageJsonScriptsLint>
     <PackageJsonScriptsPreview Condition="$(PackageJsonScriptsPreview) == ''">vite preview</PackageJsonScriptsPreview>
+    <PackageJsonDependenciesBaseui Condition="$(PackageJsonDependenciesBaseui) == ''">^18.1.0</PackageJsonDependenciesBaseui>
     <PackageJsonDependenciesReact Condition="$(PackageJsonDependenciesReact) == ''">^19.2.7</PackageJsonDependenciesReact>
     <PackageJsonDependenciesReactDom Condition="$(PackageJsonDependenciesReactDom) == ''">^19.2.7</PackageJsonDependenciesReactDom>
+    <PackageJsonDependenciesStyletronEngineAtomic Condition="$(PackageJsonDependenciesStyletronEngineAtomic) == ''">^1.6.2</PackageJsonDependenciesStyletronEngineAtomic>
+    <PackageJsonDependenciesStyletronReact Condition="$(PackageJsonDependenciesStyletronReact) == ''">^6.1.1</PackageJsonDependenciesStyletronReact>
     <PackageJsonDevdependenciesEslintJs Condition="$(PackageJsonDevdependenciesEslintJs) == ''">^10.0.1</PackageJsonDevdependenciesEslintJs>
     <PackageJsonDevdependenciesTypesNode Condition="$(PackageJsonDevdependenciesTypesNode) == ''">^24.13.2</PackageJsonDevdependenciesTypesNode>
     <PackageJsonDevdependenciesTypesReact Condition="$(PackageJsonDevdependenciesTypesReact) == ''">^19.2.17</PackageJsonDevdependenciesTypesReact>

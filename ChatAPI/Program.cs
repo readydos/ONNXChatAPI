@@ -28,7 +28,7 @@ builder.Services.AddSwaggerGen(c => {
         Type = SecuritySchemeType.ApiKey,
         Name = "X-API-Key",
         In = ParameterLocation.Header,
-        Description = "API key required. Default: SecurityPassword123!"
+        Description = "API key required. e.g.: eyJhbGciOiJIUzI1N..."
     });
 
     c.AddSecurityRequirement(document => new OpenApiSecurityRequirement {

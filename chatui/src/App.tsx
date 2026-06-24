@@ -1,122 +1,150 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { Button } from "baseui/button";
+import { Input } from "baseui/input";
+import { Card } from "baseui/card";
+import { Block } from "baseui/block";
 
-function App() {
-  const [count, setCount] = useState(0)
+const API_URL = "https://localhost:7075/api/Chat";
+const API_KEY = import.meta.env.VITE_API_KEY;
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
 }
 
-export default App
+interface ChatResponse {
+    message?: string;
+}
+
+export default function App() {
+    const [message, setMessage] = useState<string>("");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [chat, setChat] = useState<ChatMessage[]>([]);
+
+    const sendMessage = async (): Promise<void> => {
+        if (!message.trim()) return;
+
+        const userMessage = message;
+
+        setChat((prev) => [
+            ...prev,
+            {
+                role: "user",
+                content: userMessage,
+            },
+        ]);
+
+        setMessage("");
+        setLoading(true);
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-API-KEY": API_KEY,
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data: ChatResponse = await response.json();
+
+            setChat((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    content: data.message ?? "No response received",
+                },
+            ]);
+        } catch (error) {
+            setChat((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    content:
+                        error instanceof Error
+                            ? error.message
+                            : "An unknown error occurred",
+                },
+            ]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleKeyDown = (
+        e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+    ): void => {
+        if (e.key === "Enter" && !loading) {
+            sendMessage();
+        }
+    };
+
+    return (
+        <Block
+            display="flex"
+            flexDirection="column"
+            height="100vh"
+            maxWidth="900px"
+            margin="0 auto"
+            padding="scale800"
+        >
+            <h1>Chat</h1>
+
+            <Block
+                flex="1"
+                overflow="auto"
+                display="flex"
+                flexDirection="column"
+                marginBottom="scale600"
+            >
+                {chat.map((msg, index) => (
+                    <Card
+                        key={index}
+                        overrides={{
+                            Root: {
+                                style: {
+                                    marginBottom: "12px",
+                                    alignSelf:
+                                        msg.role === "user"
+                                            ? "flex-end"
+                                            : "flex-start",
+                                    maxWidth: "75%",
+                                },
+                            },
+                        }}
+                    >
+                        <strong>{msg.role === "user" ? "You" : "Assistant"}</strong>
+
+                        <div style={{ marginTop: 8 }}>{msg.content}</div>
+                    </Card>
+                ))}
+            </Block>
+
+            <Block display="flex">
+                <Input
+                    value={message}
+                    onChange={(e) => setMessage(e.currentTarget.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type a message..."
+                    disabled={loading}
+                    clearOnEscape
+                />
+
+                <Button
+                    onClick={sendMessage}
+                    isLoading={loading}
+                    disabled={loading || !message.trim()}
+                >
+                    Send
+                </Button>
+            </Block>
+        </Block>
+    );
+}
